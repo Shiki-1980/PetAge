@@ -14,7 +14,8 @@ from tqdm import tqdm
 
 
 from datasets import BatchDataset
-from model import Model,densnet,ModelReg320,ModelCLIP,Dino,HuberLoss,LogCoshLoss,DualModel,Mix_loss,ModelMix,BreedDual,AgeClassifer
+from model import Model,densnet,ModelReg320,ModelCLIP,Dino,HuberLoss,LogCoshLoss,DualModel
+from Adversarial import FGM,PGD
 import torchvision
 
 
@@ -27,23 +28,22 @@ if __name__ == "__main__":
     print(torch.cuda.get_device_name(0))
 
     np.random.seed(0)
-    
+    torch.manual_seed(0)
     torch.cuda.manual_seed_all(0)
-    torch.manual_seed(3407)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
     # 2. 设置device信息 和 创建model
     # os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
     # device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
-    device = torch.device('cuda:7')
+    device = torch.device('cuda:5')
     #model = DualModel('resnet34','resnet34',0.6,0.1)
-    model=BreedDual()
+    model=ModelReg320()
     # for layer in model.modules():
     #     print(layer)
     #gpus = [6,7]
     #model = nn.DataParallel(model, device_ids=gpus)
-
+    fgm = FGM(model)
     model = model.to(device)
 
     # 3. dataset 和 data loader, num_workers设置线程数目，pin_memory设置固定内存
@@ -86,10 +86,10 @@ if __name__ == "__main__":
     epochs = 200
 
     save_epoch = 10
-    save_model_dir = './results/Breed'
+    save_model_dir = './results/regnetx_320'
 
     eval_epoch = 100
-    save_sample_dir = './results/Breed'
+    save_sample_dir = './results/regnetx_320'
     if not os.path.exists(save_model_dir):
         os.makedirs(save_model_dir)
 
@@ -104,8 +104,8 @@ if __name__ == "__main__":
 
     # 7. 训练epoch
 
-    f1 = open('./results/Breed/traininfo.txt', 'a')
-    f2 = open('./results/Breed/evalinfo.txt', 'a')
+    f1 = open('./results/regnetx_320/traininfo.txt', 'a')
+    f2 = open('./results/regnetx_320/evalinfo.txt', 'a')
     min_mae = 100
     for epoch in range(last_epoch + 1, epochs + 1):
         if epoch %50==0:
@@ -131,7 +131,6 @@ if __name__ == "__main__":
 
             pred_age = model(image)
             #print(image.shape, pred_age.shape)
-            #loss =Mix_loss(pred_age,age,probs,R_loss=loss_fn2).to(device)
             loss = loss_fn(age, pred_age)
             #loss = age_criterion(age, pred_age)
             #print('dd:', age.detach().cpu().numpy().reshape(-1), pred_age.detach().cpu().numpy().reshape(-1))
@@ -139,7 +138,14 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             loss.backward()
+            #对抗训练
+            fgm.attack() # 在embedding上添加对抗扰动
+            fgmPred = model(image)
+            loss_adv = loss_fn(age, fgmPred)
+            loss_adv.backward() # 反向传播，并在正常的grad基础上，累加对抗训练的梯度
+            fgm.restore() # 恢复embedding参数
             optimizer.step()
+            model.zero_grad()
 
             # training result
             g_loss.append(loss.item())

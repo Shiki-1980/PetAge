@@ -51,7 +51,8 @@ class BatchDataset(Dataset):
         image_paths = []
         if mode == 'train' or mode == 'eval':
             # 假设图片存储在data_dir/trainset/ 或 data_dir/valset/ 文件夹中
-            img_dir = os.path.join(self.data_dir, 'trainset' if mode == 'train' else 'valset')
+            #croppedTrainset  croppedValset
+            img_dir = os.path.join(self.data_dir, 'croppedTrainset' if mode == 'train' else 'croppedValset')
             image_paths = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.endswith('.jpg') or f.endswith('.jpeg')]
         print(len(image_paths))
         return image_paths
@@ -65,7 +66,7 @@ class BatchDataset(Dataset):
         labels = []
         label_file = ''
         if mode == 'train':
-            label_file = os.path.join(self.data_dir, 'annotations', 'train.txt')
+            label_file = os.path.join(self.data_dir, 'annotations', 'SmoothTrain.txt')
         elif mode == 'eval':
             label_file = os.path.join(self.data_dir, 'annotations', 'val.txt')
         else:
