@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 
 from datasets import BatchDataset
-from model import Model,densnet,ModelReg320,ModelCLIP,Dino,HuberLoss,LogCoshLoss,DualModel,Mix_loss,ModelMix,BreedDual,AgeClassifer
+from model import Model,densnet,ModelReg320,ModelCLIP,Dino,HuberLoss,LogCoshLoss,DualModel,Mix_loss,ModelMix,BreedDual,AgeClassifer,BreedOptim
 import torchvision
 
 
@@ -36,9 +36,9 @@ if __name__ == "__main__":
     # 2. 设置device信息 和 创建model
     # os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
     # device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
-    device = torch.device('cuda:7')
+    device = torch.device('cuda:6')
     #model = DualModel('resnet34','resnet34',0.6,0.1)
-    model=BreedDual()
+    model=Model()
     # for layer in model.modules():
     #     print(layer)
     #gpus = [6,7]
@@ -86,10 +86,10 @@ if __name__ == "__main__":
     epochs = 200
 
     save_epoch = 10
-    save_model_dir = './results/Breed'
+    save_model_dir = './results/resnet18_pre/nospital'
 
     eval_epoch = 100
-    save_sample_dir = './results/Breed'
+    save_sample_dir = './results/resnet18_pre/nospital'
     if not os.path.exists(save_model_dir):
         os.makedirs(save_model_dir)
 
@@ -104,8 +104,8 @@ if __name__ == "__main__":
 
     # 7. 训练epoch
 
-    f1 = open('./results/Breed/traininfo.txt', 'a')
-    f2 = open('./results/Breed/evalinfo.txt', 'a')
+    f1 = open('./results/resnet18_pre/nospital/traininfo.txt', 'a')
+    f2 = open('./results/resnet18_pre/nospital/evalinfo.txt', 'a')
     min_mae = 100
     for epoch in range(last_epoch + 1, epochs + 1):
         if epoch %50==0:

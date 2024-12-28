@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader,dataset
 from torchvision import transforms
 from tqdm import tqdm
 from datasets import BatchDataset
-from model import ModelReg320,Model50,BreedDual,OptimModel
+from model import ModelReg320,Model50,BreedDual,OptimModel,BreedOptim
 import torchvision
 
 
@@ -34,11 +34,11 @@ def load_model(checkpoint_path, model):
 if __name__ == "__main__":
     # device = torch.device('cuda:6')
     # model = BreedDual()
-    device1 = torch.device('cuda:7')
-    device2 = torch.device('cuda:4')
-    device3 = torch.device('cuda:2')
+    device1 = torch.device('cuda:3')
+    device2 = torch.device('cuda:6')
+    device3 = torch.device('cuda:5')
     #model = DualModel('resnet34','resnet34',0.6,0.1)
-    model=OptimModel(device1=device1,device2=device2,device3=device3)
+    model=BreedOptim(device1=device1,device2=device2,device3=device3)
     #model=ModelReg320()
     #gpus = [6,7]
     #model = nn.DataParallel(model, device_ids=gpus)
@@ -54,22 +54,23 @@ if __name__ == "__main__":
     model.eval()
     maes = []
     loss_fn = nn.L1Loss().to(device1)
-    output_file = './prediction/Optim/Predictions.txt'
+    output_file = './prediction/Optim2/Predictions2.txt'
     with open(output_file, 'w') as f:
         with torch.no_grad():
             for data in tqdm(eval_dataset_loader):
                 image, age, filename = data
                 image = image.to(device1)
                 age = age.to(device1)
-                out = model(image,age).to(device1)
-
+                out,check= model(image,age)
+                out=out.to(device1)
+                check =check.to(device1)
                 # 打印预测值和真实标签
                 # print(out)
                 # print(age)
 
                 # 写入每个文件的预测结果（文件名与输出中间用空格隔开）
-                for fn, pred in zip(filename, out.cpu().numpy()):
-                    f.write(f"{fn}\t{pred}\n")  # 假设pred是一个大小为[batch_size, 1]的张量
+                for fn, pred,check in zip(filename, out.cpu().numpy(),check.cpu().numpy()):
+                    f.write(f"{fn}\t{pred}\t{check}\n")  # 假设pred是一个大小为[batch_size, 1]的张量
 
                 # 计算MAE
                 mae = loss_fn(out, age)

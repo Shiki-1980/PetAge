@@ -44,15 +44,15 @@ if __name__ == "__main__":
     # 2. 设置device信息 和 创建model
     # os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
     # device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
-    device = torch.device('cuda:2')
+    device = torch.device('cuda:5')
     #model = DualModel('resnet34','resnet34',0.6,0.1)
-    model=RegAgeClassifer()
+    model=AgeClassifer()
     # for layer in model.modules():
     #     print(layer)
     #gpus = [6,7]
     #model = nn.DataParallel(model, device_ids=gpus)
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint)
+    #checkpoint = torch.load(checkpoint_path)
+    #model.load_state_dict(checkpoint)
     model = model.to(device)
 
     # 3. dataset 和 data loader, num_workers设置线程数目，pin_memory设置固定内存
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     #loss_fn = nn.SmoothL1Loss().to(device)
     #loss_fn = HuberLoss()
 
-    learning_rate = 5 * 1e-5
+    learning_rate = 1 * 1e-4
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     #optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
 
@@ -95,10 +95,10 @@ if __name__ == "__main__":
     epochs = 200
 
     save_epoch = 10
-    save_model_dir = './results/RegAge'
+    save_model_dir = './results/RegAge/second'
 
     eval_epoch = 100
-    save_sample_dir = './results/RegAge'
+    save_sample_dir = './results/RegAge/second'
     if not os.path.exists(save_model_dir):
         os.makedirs(save_model_dir)
 
@@ -113,8 +113,8 @@ if __name__ == "__main__":
 
     # 7. 训练epoch
 
-    f1 = open('./results/RegAge/traininfo.txt', 'a')
-    f2 = open('./results/RegAge/evalinfo.txt', 'a')
+    f1 = open('./results/RegAge/second/traininfo.txt', 'a')
+    f2 = open('./results/RegAge/second/evalinfo.txt', 'a')
     max_acc = 0
     
     for epoch in range(last_epoch + 1, epochs + 1):

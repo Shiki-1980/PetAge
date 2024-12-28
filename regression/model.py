@@ -705,6 +705,53 @@ class RegAgeClassifer(nn.Module):
 
         print(f"Successfully loaded weights from {safetensors_path}")
 
+class BreedOptim(nn.Module):
+     def __init__(self,device1,device2,device3):
+        super().__init__()
+        self.classifier = AgeClassifer().to(device1)
+        self.main = ModelReg320().to(device2)
+        self.sup = ModelReg320().to(device3)
+        self.load_safetensors()
+        self.device=[device1,device2,device3]
+
+     def load_safetensors(self):
+        # 加载 safetensors 文件
+        Age_classifier_state_dict = torch.load("./results/AgeClassify/bset/best_model.pth")
+        Middel_state_dict=torch.load("./results/regnetx_320/middle/best_model.pth")
+        Other_state_dict=torch.load("./results/regnetx_320/other/best_model.pth")
+        # 将 safetensors 文件加载到模型中
+        self.classifier.load_state_dict(Age_classifier_state_dict, strict=False)
+        self.main.load_state_dict(Middel_state_dict,strict=False)
+        self.sup.load_state_dict(Other_state_dict,strict=False)
+        print(f"Successfully loaded weights ")
+     def forward(self, x,age):
+        #print(x.shape)
+        pred_logits = self.classifier(x.to(self.device[0]))  # 获取模型的logits输出
+        _, predicted = torch.max(pred_logits, 1)  # 获取每个样本的最大值索引作为预测类别
+        true_labels = ((age > 20) & (age < 90)).long()  # 转换为 long 类型
+
+        # 统计预测正确的样本数量
+        correct_predictions = (predicted == true_labels).sum().item()
+        total_samples = len(age)
+        accuracy = correct_predictions / total_samples * 100
+        correct = (predicted == true_labels).int()
+        print(correct)
+        print(f"Classification Accuracy: {accuracy:.2f}%")
+        # error_prob = 0.1
+        # random_value = random.random()<error_prob
+        # flip = (age>20 and age <90) ^ random_value
+        pred_main = self.main(x.to(self.device[1])).to(self.device[0])
+        pred_main = torch.clamp(pred_main, min=20, max=90)
+        pred_sup = self.sup(x.to(self.device[2])).to(self.device[0])
+        pred_sup = torch.where((pred_sup > 20) & (pred_sup <= 55), 
+                           torch.tensor(20, device=self.device[0]), 
+                           pred_sup)
+        pred_sup = torch.where( (pred_sup > 55) & (pred_sup < 90), 
+                           torch.tensor(92, device=self.device[0]), 
+                           pred_sup)
+        pred = torch.where(predicted.bool(), pred_main, pred_sup)
+        return pred,correct
+
 class OptimModel(nn.Module):
      def __init__(self,device1,device2,device3):
         super().__init__()
@@ -716,7 +763,7 @@ class OptimModel(nn.Module):
 
      def load_safetensors(self):
         # 加载 safetensors 文件
-        Age_classifier_state_dict = torch.load("./results/AgeClassify/best_model.pth")
+        Age_classifier_state_dict = torch.load("./results/AgeClassify/bset/best_model.pth")
         Middel_state_dict=torch.load("./results/Breed/MiddleBreed/best_model.pth")
         Other_state_dict=torch.load("./results/Breed/OtherBreed/best_model.pth")
         # 将 safetensors 文件加载到模型中
@@ -791,7 +838,7 @@ class LogCoshLoss(nn.Module):
         return torch.mean(diff.abs() + torch.log1p(torch.exp(-2 * diff.abs())) - torch.log(torch.tensor(2.0)))
     
 class HuberLoss:
-    def __init__(self, delta=50):
+    def __init__(self, delta=10):
         self.delta = delta  # 设置阈值为75
 
     def __call__(self, y_pred, y_true):
